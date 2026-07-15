@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aktivasi Kartu Review</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f0e8;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 24px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; color: #1a1a1a; }
+  p.sub { color: #777; font-size: 0.9rem; margin: 0 0 22px; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; color: #333; margin: 16px 0 6px; }
+  input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1.5px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+    background: #fafafa;
+  }
+  input:focus { outline: none; border-color: #4a7c59; background: #fff; }
+  button {
+    width: 100%;
+    margin-top: 24px;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    background: #4a7c59;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { background: #a8c3ae; }
+  #status {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    display: none;
+  }
+  #status.success { display: block; background: #e6f4ea; color: #2b6b3f; }
+  #status.error { display: block; background: #fdecea; color: #b3261e; }
+  .preview-link { display: block; margin-top: 10px; font-size: 0.85rem; color: #4a7c59; word-break: break-all; }
+  .hint { font-size: 0.75rem; color: #999; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Aktivasi Kartu Review</h1>
+  <p class="sub">Isi form ini pas closing di tempat — kartu langsung hidup.</p>
+
+  <form id="activateForm">
+    <label for="code">Kode Kartu</label>
+    <input type="text" id="code" placeholder="contoh: A1B2C3" required autocapitalize="characters" autocomplete="off">
+    <div class="hint">Lihat kode di bagian belakang kartu fisik</div>
+
+    <label for="business">Nama Bisnis</label>
+    <input type="text" id="business" placeholder="contoh: Kopi Senja" required>
+
+    <label for="reviewUrl">Link Google Review</label>
+    <input type="url" id="reviewUrl" placeholder="https://g.page/r/..." required>
+    <div class="hint">Dari Google Maps: cari bisnis → Tulis Review → Share</div>
+
+    <label for="pin">PIN</label>
+    <input type="password" id="pin" inputmode="numeric" placeholder="PIN kamu" required>
+
+    <button type="submit" id="submitBtn">Aktifkan Kartu</button>
+  </form>
+
+  <div id="status"></div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://qdnngscqagmkuzzttcyp.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_EPJFydcXiPVoXvj3kjSHQg_6YhDu3wz";
+  const REDIRECT_BASE = "https://google-review-cards-eight.vercel.app/r/";
+
+  const form = document.getElementById("activateForm");
+  const statusEl = document.getElementById("status");
+  const submitBtn = document.getElementById("submitBtn");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Memproses...";
+    statusEl.className = "";
+    statusEl.style.display = "none";
+
+    const code = document.getElementById("code").value.trim().toUpperCase();
+    const business = document.getElementById("business").value.trim();
+    const reviewUrl = document.getElementById("reviewUrl").value.trim();
+    const pin = document.getElementById("pin").value.trim();
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/activate_card`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          p_code: code,
+          p_business_name: business,
+          p_review_url: reviewUrl,
+          p_pin: pin
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal mengaktifkan kartu");
+
+      statusEl.className = "success";
+      statusEl.innerHTML = `✅ Kartu <strong>${code}</strong> aktif untuk <strong>${business}</strong>.
+        <a class="preview-link" href="${REDIRECT_BASE}${code}" target="_blank">${REDIRECT_BASE}${code}</a>`;
+      statusEl.style.display = "block";
+      document.getElementById("pin").value = "";
+
+    } catch (err) {
+      statusEl.className = "error";
+      statusEl.textContent = "❌ " + err.message;
+      statusEl.style.display = "block";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Aktifkan Kartu";
+    }
+  });
+</script>
+
+</body>
+</html>
