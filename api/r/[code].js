@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  const { code, debug } = req.query;
+  const { code } = req.query;
 
   if (!code) {
     return res.redirect(302, '/not-found.html');
@@ -9,14 +9,11 @@ export default async function handler(req, res) {
   const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_KEY) {
-    if (debug) {
-      return res.status(200).json({ error: 'Missing env vars', SUPABASE_URL: !!SUPABASE_URL, SUPABASE_KEY: !!SUPABASE_KEY });
-    }
     return res.redirect(302, '/not-found.html');
   }
 
   try {
-    const url = `${SUPABASE_URL}/rest/v1/review_cards?code=eq.${encodeURIComponent(code)}&select=code,google_review_url,is_active`;
+    const url = `${SUPABASE_URL}/rest/v1/review_cards?code=eq.${encodeURIComponent(code)}&select=google_review_url,is_active`;
 
     const response = await fetch(url, {
       headers: {
@@ -25,16 +22,11 @@ export default async function handler(req, res) {
       },
     });
 
-    const rows = await response.json();
-
-    if (debug) {
-      return res.status(200).json({
-        supabase_status: response.status,
-        supabase_ok: response.ok,
-        rows_received: rows,
-      });
+    if (!response.ok) {
+      return res.redirect(302, '/not-found.html');
     }
 
+    const rows = await response.json();
     const card = rows[0];
 
     if (!card || !card.google_review_url) {
@@ -52,9 +44,6 @@ export default async function handler(req, res) {
 
     return res.redirect(302, reviewUrl);
   } catch (err) {
-    if (debug) {
-      return res.status(200).json({ error: String(err) });
-    }
     return res.redirect(302, '/not-found.html');
   }
 }
